@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "types": ["node"],
+    "strict": true,
+    "target": "ES6",
+    "outDir": "./dist",
+    "module": "commonjs",
+    "skipLibCheck": true /* Skip type checking all .d.ts files. */,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true
+  },
+  "include": [
+    "*.ts", 
+    "controllers/**/*.ts",
+    "models/**/*.ts", 
+    "routes/**/*.ts",
+    "utils/**/*.ts"
+  ],
+  "exclude": ["node_modules", "**/*.spec.ts", "**/*.test.ts"]
+}
