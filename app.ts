@@ -13,7 +13,10 @@ const app = express();
 
 app.use(
   cors({
-    origin: ['http://localhost:8080'],
+    origin: [
+      'http://localhost:8080',
+      'https://switchstack-app-frontend.vercel.app',
+    ],
   })
 );
 app.use(morgan('dev'));
