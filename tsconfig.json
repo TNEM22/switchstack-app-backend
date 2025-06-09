@@ -11,10 +11,10 @@
     "resolveJsonModule": true
   },
   "include": [
-    "*.ts", 
-    "controllers/**/*.ts",
-    "models/**/*.ts", 
-    "routes/**/*.ts",
+    "*.ts",
+    "api/v1/controllers/**/*.ts",
+    "models/**/*.ts",
+    "api/v1/routes/**/*.ts",
     "utils/**/*.ts"
   ],
   "exclude": ["node_modules", "**/*.spec.ts", "**/*.test.ts"]

@@ -8,7 +8,7 @@ router.use(authController.protect);
 
 router
   .route('/')
-  .get(espController.getAllEsp)
+  .get(authController.restrictTo('user'), espController.getAllEsp) // Get user registered esps and switches.
   .post(authController.restrictTo('admin'), espController.createEsp);
 
 router.route('/:id').patch(espController.updateEsp);

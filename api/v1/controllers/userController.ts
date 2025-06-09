@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 
-import User from '../models/userModel';
-import catchAsync from '../utils/catchAsync';
+import User from '../../../models/userModel';
+
+import catchAsync from '../../../utils/catchAsync';
 
 interface RequestWithUser extends Request {
   user?: any;

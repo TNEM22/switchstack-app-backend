@@ -1,10 +1,11 @@
-import jwt, { SignOptions } from 'jsonwebtoken';
 import { promisify } from 'util';
-import User from '../models/userModel';
-
-import catchAsync from '../utils/catchAsync';
-import AppError from '../utils/appError';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
+
+import User from '../../../models/userModel';
+
+import catchAsync from '../../../utils/catchAsync';
+import AppError from '../../../utils/appError';
 
 interface RequestWithUser extends Request {
   user?: any;
