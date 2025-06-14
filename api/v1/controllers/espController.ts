@@ -11,12 +11,13 @@ interface RequestWithUser extends Request {
   user?: any;
 }
 
+// Get all esps of user
 const getAllEsp = catchAsync(
   async (req: RequestWithUser, res: Response, next: NextFunction) => {
     const esps = await Esp.find({
       users: req.user._id,
     })
-      .select('_id esp_id switches')
+      .select('_id esp_id name icon switches')
       .populate('switches');
 
     res.status(200).json({
@@ -95,11 +96,13 @@ const createEsp = catchAsync(
 // Register the Device for the user
 const registerDevice = catchAsync(
   async (req: RequestWithUser, res: Response, next: NextFunction) => {
-    const esp_id = req.body.device_id;
+    const { esp_id, name, icon } = req.body;
+    // const esp_id = device_id;
+
     // Check if device is already registered
-    const esp = await Esp.findOne({
+    let esp = await Esp.findOne({
       esp_id,
-    }).select('owner noOfSwitches');
+    }).select('owner noOfSwitches switches');
 
     // If the device is not found, return an error
     if (!esp) {
@@ -107,53 +110,93 @@ const registerDevice = catchAsync(
     }
 
     // console.log(existingEsp?.owner);
+    // Check if device is registered to a owner
     if (esp?.owner) {
       return next(new AppError(`Device is already registered`, 409));
     }
 
-    // Register device by the user
+    // Register device by the user and update name and icon
     let users: string[] | mongoose.Schema.Types.ObjectId[] = esp?.users ?? [];
     users.push(req.user._id);
-    await Esp.findByIdAndUpdate(esp._id, {
-      owner: req.user._id,
-      users: users,
-    });
+    esp = await Esp.findByIdAndUpdate(
+      esp._id,
+      {
+        owner: req.user._id,
+        users: users,
+        name: name,
+        icon: icon,
+      },
+      { new: true }
+    ).populate('switches');
 
-    // Create switches
-    let switchesObj: { esp: string }[] = [];
+    // Check if the switches are already created for the esp/device
+    if (esp && esp.switches.length < esp.noOfSwitches) {
+      // Create switches
+      let switchesObj: { esp: string }[] = [];
 
-    for (let i = 0; i < esp.noOfSwitches; i += 1) {
-      switchesObj.push({ esp: esp._id });
+      for (let i = 0; i < esp.noOfSwitches; i += 1) {
+        switchesObj.push({ esp: esp._id });
+      }
+
+      const newSwitches = await Switch.insertMany(switchesObj);
+      let switches: string[] = [];
+      newSwitches.forEach((sw) => {
+        //   switches.push({ esp: sw._id });
+        switches.push(sw._id);
+      });
+
+      // Add switches to esp device
+      // const room = await Esp.findByIdAndUpdate(
+      esp = await Esp.findByIdAndUpdate(
+        esp._id,
+        { switches: switches },
+        { new: true }
+      ).populate('switches');
     }
-
-    const newSwitches = await Switch.insertMany(switchesObj);
-    let switches: string[] = [];
-    newSwitches.forEach((sw) => {
-      //   switches.push({ esp: sw._id });
-      switches.push(sw._id);
-    });
-
-    // Add switches to esp device
-    await Esp.findByIdAndUpdate(esp._id, {
-      switches: switches,
-    });
 
     res.status(201).json({
       status: 'success',
       data: {
         message: 'Device Registered Successfully!',
+        room: esp,
       },
     });
   }
 );
 
-const updateEsp = catchAsync(
-  async (req: Request, res: Response, next: NextFunction) => {
-    const esp = await Esp.findByIdAndUpdate(req.params.id, req.body);
+// Adds new authorized user for Esp/Device either during registration or later
 
-    if (!esp) {
-      return next(new AppError(`No esp found with ${req.params.id} ID`, 404));
+// Update Esp/Device name and icon
+const updateEsp = catchAsync(
+  async (req: RequestWithUser, res: Response, next: NextFunction) => {
+    const { espId } = req.params;
+    const { name, icon } = req.body;
+
+    // Step 1: Check first if all fields are present
+    if (!name || !icon) {
+      return next(new AppError('Missing Fields', 400));
     }
+
+    // Step 2: Check if esp/device exists
+    const esp = await Esp.findOne({ esp_id: espId });
+    if (!esp) {
+      return next(new AppError('Device not found!', 404));
+      //   return next(new AppError(`No esp found with ${req.params.id} ID`, 404));
+    }
+
+    // Step 3: Check if the user is authorized to update the esp/device
+    if (
+      !esp.users
+        .map((user) => user.toString())
+        .includes(req.user._id.toString())
+    )
+      return next(new AppError('You are not authorized!', 401));
+
+    // Step 4: Update the esp/device name and icon
+    await Esp.findByIdAndUpdate(esp._id, {
+      name: name,
+      icon: icon,
+    });
 
     res.status(200).json({
       status: 'success',
@@ -164,15 +207,46 @@ const updateEsp = catchAsync(
   }
 );
 
+// Update switch name and icon
 const updateSwitch = catchAsync(
-  async (req: Request, res: Response, next: NextFunction) => {
-    const aSwitch = await Switch.findByIdAndUpdate(req.params.id, req.body);
+  async (req: RequestWithUser, res: Response, next: NextFunction) => {
+    const { espId, switchId } = req.params;
+    const { name, icon } = req.body;
+
+    // Check first if all fields are present
+    if (!name || !icon) return next(new AppError('Missing Fields', 400));
+
+    // Check for following user if the user has authority for esp
+    // Step 1: Get the esp
+    const esp = await Esp.findOne({ esp_id: espId });
+
+    // Check if esp/device exists
+    if (!esp) return next(new AppError('Device not found!', 404));
+
+    // Step 2: Check user in esp users list if present allow to edit access
+    if (
+      !esp.users
+        .map((user) => user.toString())
+        .includes(req.user._id.toString())
+    )
+      return next(new AppError('You are not authorized!', 401));
+
+    // Step 3: Check if the switch exists in the esp/device
+    if (!esp.switches.map((sw) => sw.toString()).includes(switchId.toString()))
+      return next(new AppError('Invalid Device Found!', 401));
+
+    // Finally user is authorized and esp/device is present in db then update the name and icon fields
+    const aSwitch = await Switch.findByIdAndUpdate(switchId, {
+      name: name,
+      icon: icon,
+    });
 
     if (!aSwitch) {
-      return next(
-        new AppError(`No switch found with ${req.params.id} ID`, 404)
-      );
+      return next(new AppError(`Switch not found!`, 404));
     }
+    // if (!aSwitch) {
+    //   return next(new AppError(`No switch found with ${switchId} ID`, 404));
+    // }
 
     res.status(200).json({
       status: 'success',

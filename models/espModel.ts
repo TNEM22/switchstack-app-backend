@@ -5,7 +5,8 @@ interface Esp extends mongoose.Document {
   esp_id: string;
   users: mongoose.Schema.Types.ObjectId[];
   owner: mongoose.Schema.Types.ObjectId;
-  name: string;
+  name: null | string;
+  icon: null | string;
   active: boolean;
   noOfSwitches: number;
   switches: mongoose.Schema.Types.ObjectId[];
@@ -32,6 +33,12 @@ const espSchema = new mongoose.Schema<Esp>(
     name: {
       type: String,
       trim: true,
+      default: null,
+    },
+    icon: {
+      type: String,
+      trim: true,
+      default: null,
     },
     active: {
       type: Boolean,

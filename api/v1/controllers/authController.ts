@@ -40,7 +40,7 @@ const createSendToken = (user: User, statusCode: number, res: Response) => {
 
   if (process.env.NODE_ENV === 'production') cookieOptions.secure = true;
 
-  res.cookie('jwt', token, cookieOptions);
+  res.cookie('token', token, cookieOptions);
 
   // Remove password from output
   //   user.password = undefined;
@@ -48,7 +48,7 @@ const createSendToken = (user: User, statusCode: number, res: Response) => {
   res.status(statusCode).json({
     status: 'success',
     data: {
-      token: token,
+      // token: token,
       user: {
         name: user.name,
         email: user.email,
@@ -95,15 +95,18 @@ const login = catchAsync(
 const protect = catchAsync(
   async (req: RequestWithUser, res: Response, next: NextFunction) => {
     // 1) Getting token and check of it's there
-    let token: string | undefined;
-    if (
-      req.headers.authorization &&
-      req.headers.authorization.startsWith('Bearer')
-    ) {
-      token = req.headers.authorization.split(' ')[1];
-    } else if (req.body.token) {
-      token = req.body.token;
-    }
+    // let token: string | undefined;
+    // console.log(req.headers);
+    // if (
+    //   req.headers.authorization &&
+    //   req.headers.authorization.startsWith('Bearer')
+    // ) {
+    //   token = req.headers.authorization.split(' ')[1];
+    // } else if (req.cookies.token) {
+    //   token = req.cookies.token;
+    // }
+    // console.log('Cookies:', req.cookies);
+    const token: string = req.cookies.token;
 
     if (!token) {
       return next(

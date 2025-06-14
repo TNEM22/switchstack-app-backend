@@ -1,5 +1,6 @@
-import morgan from 'morgan';
 import cors from 'cors';
+import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 import express, { Request, Response, NextFunction } from 'express';
 
 import AppError from './utils/appError';
@@ -16,8 +17,10 @@ app.use(
       'http://localhost:8080',
       'https://switchstack-app-frontend.vercel.app',
     ],
+    credentials: true,
   })
 );
+app.use(cookieParser());
 app.use(morgan('dev'));
 app.use(express.json());
 

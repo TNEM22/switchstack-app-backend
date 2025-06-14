@@ -12,12 +12,15 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.11.0",
+  "packageManager": "pnpm@10.12.1+sha512.f0dda8580f0ee9481c5c79a1d927b9164f2c478e90992ad268bbb2465a736984391d6333d2c327913578b2804af33474ca554ba29c04a8b13060a717675ae3ac",
   "devDependencies": {
+    "@types/cookie-parser": "^1.4.9",
+    "@types/cors": "^2.8.18",
     "@types/express": "^5.0.2",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/morgan": "^1.9.9",
     "@types/node": "^22.15.19",
+    "@types/validator": "^13.15.0",
     "eslint": "^9.27.0",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-prettier": "^5.4.0",
@@ -26,9 +29,8 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "@types/cors": "^2.8.18",
-    "@types/validator": "^13.15.0",
     "bcryptjs": "^3.0.2",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
