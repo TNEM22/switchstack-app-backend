@@ -1,6 +1,6 @@
 import { promisify } from 'util';
 import jwt, { SignOptions } from 'jsonwebtoken';
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction, CookieOptions } from 'express';
 
 import User from '../../../models/userModel';
 
@@ -32,10 +32,11 @@ const createSendToken = (user: User, statusCode: number, res: Response) => {
   const expiryDays = Number(process.env.JWT_COOKIE_EXPIRES_IN) || 90;
   const expiryMs = expiryDays * 24 * 60 * 60 * 1000;
 
-  const cookieOptions = {
+  const cookieOptions: CookieOptions = {
     expires: new Date(Date.now() + expiryMs),
     secure: false,
     httpOnly: true,
+    sameSite: 'none', // 'lax' or 'strict' for CSRF protection
   };
 
   if (process.env.NODE_ENV === 'production') cookieOptions.secure = true;
