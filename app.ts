@@ -11,12 +11,13 @@ import globalErrorHandler from './utils/errorHandler';
 
 const app = express();
 
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : ['https://switchstack-app-frontend.vercel.app'];
+
 app.use(
   cors({
-    origin: [
-      'http://localhost:8080',
-      'https://switchstack-app-frontend.vercel.app',
-    ],
+    origin: allowedOrigins,
     credentials: true,
   })
 );
