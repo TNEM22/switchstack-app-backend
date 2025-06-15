@@ -93,6 +93,21 @@ const login = catchAsync(
   }
 );
 
+const logout = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    res.cookie('token', 'loggedout', {
+      expires: new Date(Date.now() + 10 * 1000), // 10 seconds
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      sameSite: 'none',
+    });
+    res.status(200).json({
+      status: 'success',
+      message: 'Logged out successfully',
+    });
+  }
+);
+
 const protect = catchAsync(
   async (req: RequestWithUser, res: Response, next: NextFunction) => {
     // 1) Getting token and check of it's there
@@ -155,4 +170,4 @@ const restrictTo =
     next();
   };
 
-export default { signup, login, protect, restrictTo };
+export default { signup, login, logout, protect, restrictTo };
