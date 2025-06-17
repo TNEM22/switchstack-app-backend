@@ -11,6 +11,8 @@ import globalErrorHandler from './utils/errorHandler';
 
 const app = express();
 
+app.use(cookieParser());
+
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
   : ['https://switchstack-app-frontend.vercel.app'];
@@ -21,7 +23,6 @@ app.use(
     credentials: true,
   })
 );
-app.use(cookieParser());
 app.use(morgan('dev'));
 app.use(express.json());
 

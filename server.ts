@@ -1,7 +1,10 @@
-import app from './app';
 import dotenv from 'dotenv';
-import mongoose from 'mongoose';
 dotenv.config({ path: './config.env' });
+
+import app from './app';
+import mongoose from 'mongoose';
+
+import v1WSS from './api/v1/websockets';
 
 const DB: string = (process.env.DATABASE ?? '').replace(
   '<PASSWORD>',
@@ -19,6 +22,8 @@ mongoose.connection.on('disconnected', () => {
 
 const port: number = Number(process.env.PORT) || 3000;
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`Server is running on port ${port}....`);
 });
+
+v1WSS(server);

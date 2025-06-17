@@ -36,10 +36,13 @@ const createSendToken = (user: User, statusCode: number, res: Response) => {
     expires: new Date(Date.now() + expiryMs),
     secure: false,
     httpOnly: true,
-    sameSite: 'none', // 'lax' or 'strict' for CSRF protection
+    // sameSite: 'none', // 'lax' or 'strict' for CSRF protection
   };
 
-  if (process.env.NODE_ENV === 'production') cookieOptions.secure = true;
+  if (process.env.NODE_ENV === 'production') {
+    cookieOptions.secure = true;
+    cookieOptions.sameSite = 'none'; // Required for cross-site cookies in production
+  }
 
   res.cookie('token', token, cookieOptions);
 
@@ -95,12 +98,14 @@ const login = catchAsync(
 
 const logout = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    res.cookie('token', 'loggedout', {
+    const cookieOptions: CookieOptions = {
       expires: new Date(Date.now() + 10 * 1000), // 10 seconds
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
-      sameSite: 'none',
-    });
+      sameSite: 'none', // 'lax' or 'strict' for CSRF protection
+    };
+
+    res.cookie('token', 'loggedout', cookieOptions);
     res.status(200).json({
       status: 'success',
       message: 'Logged out successfully',
@@ -121,8 +126,9 @@ const protect = catchAsync(
     // } else if (req.cookies.token) {
     //   token = req.cookies.token;
     // }
-    // console.log('Cookies:', req.cookies);
     const token: string = req.cookies.token;
+    // console.log('\nCookies:', req.cookies);
+    // console.log('\nReq headers:', req.headers);
 
     if (!token) {
       return next(
