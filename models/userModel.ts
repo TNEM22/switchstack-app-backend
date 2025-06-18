@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import mongoose from 'mongoose';
+import mongoose, { mongo } from 'mongoose';
 import validator from 'validator';
 
 // name, email, photo, password, passwordConfirm
@@ -8,6 +8,7 @@ interface User extends mongoose.Document {
   name: string;
   email: string;
   role: 'user' | 'admin';
+  registeredDevices: mongoose.Schema.Types.ObjectId[];
   password: string;
   passwordConfirm: string | undefined;
   active?: boolean;
@@ -34,6 +35,7 @@ const userSchema = new mongoose.Schema<User>(
       enum: ['user', 'admin'],
       default: 'user',
     },
+    registeredDevices: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Esp' }],
     password: {
       type: String,
       required: [true, 'A user must have a password'],

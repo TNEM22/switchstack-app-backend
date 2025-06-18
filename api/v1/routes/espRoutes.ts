@@ -14,10 +14,22 @@ router
 // Qr code process
 router
   .route('/register')
-  .post(authController.restrictTo('user'), espController.registerDevice);
+  .post(authController.restrictTo('user'), espController.registerEsp);
 //   .get(espController.getAllSwitch)
 
-router.route('/:espId').patch(espController.updateEsp);
+router
+  .route('/:espId')
+  .patch(espController.updateEsp)
+  .delete(espController.removeEsp);
+
+router
+  .route('/:espId/users')
+  .get(espController.getEspUsers)
+  .post(espController.addUserToEsp);
+
+router
+  .route('/:espId/users/:userEmail')
+  .delete(espController.removeUserFromEsp);
 
 router.route('/:espId/switch/:switchId').patch(espController.updateSwitch);
 // router.route('/switch/:id').patch(espController.updateSwitch);

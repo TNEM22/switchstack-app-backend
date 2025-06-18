@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { Request, Response, NextFunction } from 'express';
 
+import User from '../../../models/userModel';
 import Esp from '../../../models/espModel';
 import Switch from '../../../models/switchModel';
 
@@ -93,8 +94,46 @@ const createEsp = catchAsync(
   }
 );
 
-// Register the Device for the user
-const registerDevice = catchAsync(
+// Get registered user for the esp/device
+const getEspUsers = catchAsync(
+  async (req: RequestWithUser, res: Response, next: NextFunction) => {
+    const { espId } = req.params;
+
+    // Find the esp/device
+    const esp = await Esp.findOne({ esp_id: espId })
+      .select('users owner')
+      .populate('users');
+
+    if (!esp) {
+      return next(new AppError('Device not found!', 404));
+    }
+
+    // Check if the user is authorized to view the esp/device users
+    const isAuthorized = esp.users.some(
+      (user: any) => user._id.toString() === req.user._id.toString()
+    );
+    if (!isAuthorized) {
+      return next(new AppError('You are not authorized!', 401));
+    }
+
+    // Mark the esp/device owner as admin
+    const users = esp.users.map((user: any) => ({
+      name: user.name,
+      email: user.email,
+      isAdmin: user._id.toString() === esp.owner.toString(),
+    }));
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        users: users,
+      },
+    });
+  }
+);
+
+// Register the Device for the owner user
+const registerEsp = catchAsync(
   async (req: RequestWithUser, res: Response, next: NextFunction) => {
     const { esp_id, name, icon } = req.body;
     // const esp_id = device_id;
@@ -154,6 +193,13 @@ const registerDevice = catchAsync(
       ).populate('switches');
     }
 
+    // Update the user's registered devices
+    if (esp) {
+      await User.findByIdAndUpdate(req.user._id, {
+        $addToSet: { registeredDevices: esp._id },
+      });
+    }
+
     res.status(201).json({
       status: 'success',
       data: {
@@ -164,7 +210,194 @@ const registerDevice = catchAsync(
   }
 );
 
-// Adds new authorized user for Esp/Device either during registration or later
+// Remove the Device for the owner user and all other users
+const removeEsp = catchAsync(
+  async (req: RequestWithUser, res: Response, next: NextFunction) => {
+    const { espId } = req.params;
+
+    // Step 1: Check if the esp/device exists
+    const esp = await Esp.findOne({ esp_id: espId })
+      .select('_id owner users')
+      .populate('users');
+    if (!esp) {
+      return next(new AppError('Device not found!', 404));
+    }
+
+    // Step 2: Check if the user is authorized to remove the esp/device
+    if (esp.owner.toString() !== req.user._id.toString()) {
+      return next(new AppError('Only admin can remove this room', 401));
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      // Step 3: Remove the esp/device from the user's registered devices
+      esp.users.forEach(async (user: any) => {
+        await User.findByIdAndUpdate(user._id, {
+          $pull: { registeredDevices: esp._id },
+        });
+      });
+
+      // Step 4: Remove all the switches associated with the esp/device
+      await Switch.deleteMany({ esp: esp._id });
+
+      // Step 5: Remove the owner and users registration from esp/device and reset the device
+      await Esp.findByIdAndUpdate(esp._id, {
+        owner: null,
+        users: [],
+        switches: [],
+        name: null,
+        icon: null,
+      });
+
+      await session.commitTransaction();
+      session.endSession();
+
+      res.status(204).json({
+        status: 'success',
+      });
+    } catch (err) {
+      await session.abortTransaction();
+      session.endSession();
+      return next(new AppError('Failed to remove device, Try again', 500));
+    }
+  }
+);
+
+// Owner will add other users to the esp/device
+const addUserToEsp = catchAsync(
+  async (req: RequestWithUser, res: Response, next: NextFunction) => {
+    const { espId } = req.params;
+    const { userEmail } = req.body;
+
+    // Step 1: Check if userEmail is provided
+    if (!userEmail) {
+      return next(new AppError('User email is required', 400));
+    }
+
+    // Step 2: Check if the user exists in the database
+    const user = await User.findOne({ email: userEmail });
+    if (!user) {
+      return next(new AppError('User not registered!', 404));
+    } else if (user.role === 'admin') {
+      return next(new AppError('Cannot add device admins to esp/device', 400));
+    }
+
+    // Step 3: Check if esp/device exists
+    const esp = await Esp.findOne({ esp_id: espId });
+    if (!esp) {
+      return next(new AppError('Device not found!', 404));
+    }
+
+    // Step 4: Check if the user is authorized to add users
+    if (esp.owner.toString() !== req.user._id.toString()) {
+      return next(new AppError('Only admins can add users to rooms', 401));
+    }
+
+    // Step 5: Check if the user is already added to the esp/device
+    if (esp.users.map((u) => u.toString()).includes(user._id.toString())) {
+      return next(new AppError('User is already added to the device', 400));
+    }
+
+    // Safe the transation to add the user to the esp/device
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      // Step 6: Add the user to the esp/device
+      await Esp.findByIdAndUpdate(esp._id, {
+        $addToSet: { users: user._id },
+      });
+      // esp.users.push(user._id as unknown as mongoose.Schema.Types.ObjectId);
+      // await esp.save();
+
+      // Step 7: Update the user's registered devices
+      await User.findByIdAndUpdate(user._id, {
+        $addToSet: { registeredDevices: esp._id },
+      });
+
+      await session.commitTransaction();
+      session.endSession();
+
+      res.status(200).json({
+        status: 'success',
+        data: {
+          message: 'User added to ESP successfully!',
+        },
+      });
+    } catch (err) {
+      await session.abortTransaction();
+      session.endSession();
+      return next(new AppError('Failed to add user, Try again', 500));
+    }
+  }
+);
+
+// Owner will remove other users from the esp/device
+const removeUserFromEsp = catchAsync(
+  async (req: RequestWithUser, res: Response, next: NextFunction) => {
+    const { espId, userEmail } = req.params;
+
+    // Step 1: Check if the esp/device exists
+    const esp = await Esp.findOne({ esp_id: espId });
+    if (!esp) {
+      return next(new AppError('Device not found!', 404));
+    }
+
+    // Step 2: Check if the user is authorized to remove users
+    if (esp.owner.toString() !== req.user._id.toString()) {
+      return next(new AppError('Only admins can remove users from rooms', 401));
+    }
+
+    // Step 3: Check if the removing user exists in the database
+    const removedUser = await User.findOne({ email: userEmail }).select('_id');
+    if (!removedUser) {
+      return next(new AppError('User not registered!', 404));
+    } else if (removedUser._id.toString() === esp.owner.toString()) {
+      return next(
+        new AppError('Cannot remove device admin from esp/device', 400)
+      );
+    }
+
+    // Step 4: Check if the removing user is present in esp/device
+    if (
+      !esp.users.map((u) => u.toString()).includes(removedUser._id.toString())
+    ) {
+      return next(new AppError('User does not exists in the room', 400));
+    }
+
+    // Safe the transation to remove the user from the esp/device
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      // Step 5: Remove the user from the esp/device
+      await Esp.findByIdAndUpdate(esp._id, {
+        $pull: { users: removedUser._id },
+      });
+
+      // Step 6: Update the user's registered devices
+      await User.findByIdAndUpdate(removedUser._id, {
+        $pull: { registeredDevices: esp._id },
+      });
+
+      await session.commitTransaction();
+      session.endSession();
+
+      res.status(200).json({
+        status: 'success',
+        data: {
+          message: 'User removed from ESP successfully!',
+        },
+      });
+    } catch (err) {
+      await session.abortTransaction();
+      session.endSession();
+      return next(new AppError('Failed to remove user, Try again', 500));
+    }
+  }
+);
 
 // Update Esp/Device name and icon
 const updateEsp = catchAsync(
@@ -261,7 +494,11 @@ export default {
   getAllEsp,
   getAllSwitch,
   createEsp,
-  registerDevice,
+  getEspUsers,
+  registerEsp,
+  removeEsp,
+  addUserToEsp,
+  removeUserFromEsp,
   updateEsp,
   updateSwitch,
 };

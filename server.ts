@@ -11,7 +11,10 @@ const DB: string = (process.env.DATABASE ?? '').replace(
   process.env.DATABASE_PASSWORD ?? ''
 );
 
-mongoose.connect(DB).then(() => console.log('DB connected!'));
+// Can set maxPoolSize upto 50 only for safe use, max is 100 (!! Don't set it to 100 its teir limit !!)
+mongoose
+  .connect(DB, { maxPoolSize: 10 })
+  .then(() => console.log('DB connected!'));
 mongoose.connection.on('error', (err) => {
   console.error('MongoDB connection error:', err);
   process.exit(1);
