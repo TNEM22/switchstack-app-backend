@@ -11,7 +11,7 @@ interface CustomRequest extends express.Request {
   userId?: string; // Optional userId property
 }
 
-const userConnections = new Map<string, WebSocket>();
+const userConnections = new Map<string, WebSocket[]>();
 
 export default function initWebSocketServer(
   server: http.Server
@@ -66,7 +66,16 @@ export default function initWebSocketServer(
   wss.on('connection', (ws: WebSocket, req: CustomRequest) => {
     console.log('\n✅ Client Connected:', req.userId);
     // Store the user connection
-    userConnections.set(req.userId as string, ws);
+    // Check if the user already has a connection
+    if (userConnections.has(req.userId as string)) {
+      const existingConnections = userConnections.get(req.userId as string);
+      if (existingConnections) {
+        existingConnections.push(ws);
+        userConnections.set(req.userId as string, existingConnections);
+      }
+    } else {
+      userConnections.set(req.userId as string, [ws]);
+    }
 
     ws.on('message', async (message: Buffer) => {
       const messageString = message.toString(); // Convert Buffer to string
@@ -89,24 +98,59 @@ export default function initWebSocketServer(
         delete response.users; // Remove users from the response to avoid sending it back
 
         result.users.forEach((userId) => {
-          const client = userConnections.get(userId.toString());
-          if (client && client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify(response));
+          const clients = userConnections.get(userId.toString());
+          // Check if the clients exists
+          if (clients) {
+            if (clients.length > 0) {
+              clients.forEach((client) => {
+                if (client.readyState === WebSocket.OPEN) {
+                  client.send(JSON.stringify(response));
+                } else {
+                  client?.close(); // Close the connection if it's not open
+                  // Remove the client from the user's connections
+                  userConnections.set(
+                    userId.toString(),
+                    clients.filter((c) => c !== client)
+                  );
+                }
+              });
+            } else {
+              // If no clients exist for the user, remove them from the map
+              userConnections.delete(userId.toString());
+            }
           } else {
-            // Close the connection if it's not open
-            client?.close();
-            // Remove the user from the map
+            // Remove the user from the map if no clients exist
             userConnections.delete(userId.toString());
           }
+          //   if (client && client.readyState === WebSocket.OPEN) {
+          //     client.send(JSON.stringify(response));
+          //   } else {
+          //     // Close the connection if it's not open
+          //     client?.close();
+          //     // Remove the user from the map
+          //     userConnections.delete(userId.toString());
+          //   }
         });
       } else {
         // Send back the error response to the client
-        ws.send(JSON.stringify(result));
+        // ws.send(JSON.stringify(result));
       }
     });
 
     ws.on('close', () => {
       console.log('\n❌ Client Disconnected:', req.userId);
+      // Remove the user connection
+      const clients = userConnections.get(req.userId as string);
+      if (clients) {
+        if (clients.length <= 1) {
+          userConnections.delete(req.userId as string);
+        } else {
+          userConnections.set(
+            req.userId as string,
+            clients.filter((c) => c !== ws)
+          );
+        }
+      }
     });
   });
 
