@@ -132,8 +132,8 @@ export default function initWebSocketServer(
           //   }
         });
       } else {
-        // Send back the error response to the client
-        // ws.send(JSON.stringify(result));
+        // Send back the error response to the client if result is an error
+        ws.send(JSON.stringify(result));
       }
     });
 
