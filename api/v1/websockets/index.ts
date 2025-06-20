@@ -45,9 +45,9 @@ export default function initWebSocketServer(
     response
       .then(async (data) => {
         // Step 1: Check if the user has registered devices
-        if (!(await hasRegisteredDevices(data.id))) {
-          throw new Error('Unauthorized: User has no registered devices');
-        }
+        // if (!(await hasRegisteredDevices(data.id))) {
+        //   throw new Error('Unauthorized: User has no registered devices');
+        // }
 
         // Step 2: User can connect if they have registered devices
         req.userId = data.id;
