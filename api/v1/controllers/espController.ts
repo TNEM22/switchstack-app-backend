@@ -18,7 +18,7 @@ const getAllEsp = catchAsync(
     const esps = await Esp.find({
       users: req.user._id,
     })
-      .select('_id esp_id name icon switches')
+      .select('_id esp_id name icon switches isOnline')
       .populate('switches');
 
     res.status(200).json({

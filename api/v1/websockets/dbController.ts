@@ -23,10 +23,41 @@ export const hasRegisteredDevices = async (
   }
 };
 
+export const isDeviceRegistered = async (
+  deviceId: string
+): Promise<{ id: string; users: string[] } | null> => {
+  try {
+    const device = await Esp.findOne({ esp_id: deviceId }).select(
+      '_id users owner'
+    );
+    if (device && device.owner && device.users) {
+      await Esp.findByIdAndUpdate(device._id, {
+        isOnline: true,
+      });
+      return {
+        id: device._id.toString(),
+        users: device.users.map((item) => item.toString()),
+      }; // Returns true if device owner exists
+    } else {
+      return null; // Device not registered or owner not found
+    }
+  } catch (error) {
+    return null;
+  }
+};
+
+export const makeDeviceOffline = (deviceId: string) => {
+  Esp.findByIdAndUpdate(deviceId, {
+    isOnline: false,
+  });
+};
+
 type SuccessResponse = {
   status: 'success';
   espId: string;
+  deviceId: string;
   switchId: string;
+  switchIndex: number;
   state: boolean;
   users: mongoose.Schema.Types.ObjectId[];
 };
@@ -90,7 +121,11 @@ export const changeState = async (
     return {
       status: 'success',
       espId: esp.esp_id,
+      deviceId: espId,
       switchId,
+      switchIndex: esp.switches
+        .map((item) => item.toString())
+        .indexOf(switchId),
       state,
       users: esp.users,
     };

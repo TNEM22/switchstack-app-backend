@@ -10,6 +10,7 @@ interface Esp extends mongoose.Document {
   active: boolean;
   noOfSwitches: number;
   switches: mongoose.Schema.Types.ObjectId[];
+  isOnline: boolean;
 }
 
 const espSchema = new mongoose.Schema<Esp>(
@@ -54,6 +55,10 @@ const espSchema = new mongoose.Schema<Esp>(
         ref: 'Switch',
       },
     ],
+    isOnline: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );
