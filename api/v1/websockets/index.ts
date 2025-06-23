@@ -167,8 +167,6 @@ export default function initWebSocketServer(
             espClient.send(msg);
           } else {
             espClient.close(); // Close the connection if it's not open
-            // Remove the esp client from the connections
-            espConnections.delete(result.deviceId);
           }
         }
 
@@ -215,34 +213,34 @@ export default function initWebSocketServer(
       console.log('\n❌ Client Disconnected:', req.userId);
       // Remove the user connection
       const clients = userConnections.get(req.userId as string);
+      if (!req.isUser) {
+        makeDeviceOffline(req.userId as string);
+        req.users?.forEach((user) => {
+          const usr = userConnections.get(user);
+          if (usr?.length) {
+            usr.forEach((u) => {
+              if (u.readyState === WebSocket.OPEN) {
+                u.send(
+                  JSON.stringify({
+                    status: 'info',
+                    state: 'disconnected',
+                    espId: req.userId,
+                  })
+                );
+              } else {
+                u?.close(); // Close the connection if it's not open
+                // Remove the client from the user's connections
+                userConnections.set(
+                  user,
+                  usr.filter((c) => c !== u)
+                );
+              }
+            });
+          }
+        });
+        espConnections.delete(req.userId as string);
+      }
       if (clients?.length) {
-        if (!req.isUser) {
-          makeDeviceOffline(req.userId as string);
-          req.users?.forEach((user) => {
-            const usr = userConnections.get(user);
-            if (usr?.length) {
-              usr.forEach((u) => {
-                if (u.readyState === WebSocket.OPEN) {
-                  u.send(
-                    JSON.stringify({
-                      status: 'info',
-                      state: 'disconnected',
-                      espId: req.userId,
-                    })
-                  );
-                } else {
-                  u?.close(); // Close the connection if it's not open
-                  // Remove the client from the user's connections
-                  userConnections.set(
-                    user,
-                    usr.filter((c) => c !== u)
-                  );
-                }
-              });
-            }
-          });
-        }
-
         if (clients.length <= 1) {
           userConnections.delete(req.userId as string);
         } else {
@@ -251,6 +249,8 @@ export default function initWebSocketServer(
             clients.filter((c) => c !== ws)
           );
         }
+      } else {
+        userConnections.delete(req.userId as string);
       }
     });
   });
