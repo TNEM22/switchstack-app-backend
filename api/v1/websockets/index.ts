@@ -26,13 +26,18 @@ export default function initWebSocketServer(
     const response = new Promise<{ id: string; iat: number; exp: number }>(
       (resolve, reject) => {
         try {
+          console.log('Ws Req url:', req.url);
           const cookies = cookie.parse(req.headers.cookie || '');
           const token = cookies['token'];
-          if (!token || typeof token !== 'string') {
-            throw Error('Unauthorized: No token provided');
+          if (token || typeof token === 'string') {
+            // throw Error('Unauthorized: No token provided');
+            const payload = jwt.verify(token, process.env.JWT_SECRET ?? '1d');
+            resolve(payload as { id: string; iat: number; exp: number });
+          } else {
+            console.log('Req url:', req.url);
+            console.log('Req base url:', req.baseUrl);
+            console.log('Req original url:', req.originalUrl);
           }
-          const payload = jwt.verify(token, process.env.JWT_SECRET ?? '1d');
-          resolve(payload as { id: string; iat: number; exp: number });
         } catch (err) {
           reject(err);
           // console.log('WebSocket upgrade failed:', err);

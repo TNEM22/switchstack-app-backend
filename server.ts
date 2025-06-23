@@ -27,8 +27,22 @@ mongoose.connection.on('disconnected', () => {
 
 const port: number = Number(process.env.PORT) || 2003;
 
-const server = app.listen(port, () => {
+const server = app.listen(port, '0.0.0.0', () => {
   console.log(`Server is running on port ${port}....`);
+
+  const interfaces = require('os').networkInterfaces();
+  const addresses = [];
+  for (const k in interfaces) {
+    for (const addr of interfaces[k]) {
+      if (addr.family === 'IPv4' && !addr.internal) {
+        addresses.push(addr.address);
+      }
+    }
+  }
+  console.log(`Available on your local network at:`);
+  addresses.forEach((addr) => {
+    console.log(`  http://${addr}:${port}`);
+  });
 });
 
 v1WSS(server);
