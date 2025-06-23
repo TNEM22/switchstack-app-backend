@@ -161,9 +161,15 @@ export default function initWebSocketServer(
 
         const espClient = espConnections.get(result.deviceId);
         if (espClient) {
-          const msg = `${result.switchIndex}?${result.state ? 1 : 0}`;
-          console.log(msg);
-          espClient.send(msg);
+          if (espClient.readyState === WebSocket.OPEN) {
+            const msg = `${result.switchIndex}?${result.state ? 1 : 0}`;
+            console.log(msg);
+            espClient.send(msg);
+          } else {
+            espClient.close(); // Close the connection if it's not open
+            // Remove the esp client from the connections
+            espConnections.delete(result.deviceId);
+          }
         }
 
         delete response.users; // Remove users from the response to avoid sending it back
