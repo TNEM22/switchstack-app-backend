@@ -190,10 +190,11 @@ export default function initWebSocketServer(
                 );
               }
             });
-          } else {
-            // Remove the user from the map if no clients exist
-            userConnections.delete(userId.toString());
           }
+          //   else {
+          //     // Remove the user from the map if no clients exist
+          //     userConnections.delete(userId.toString());
+          //   }
           //   if (client && client.readyState === WebSocket.OPEN) {
           //     client.send(JSON.stringify(response));
           //   } else {
