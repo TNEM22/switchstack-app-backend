@@ -167,6 +167,7 @@ export default function initWebSocketServer(
             espClient.send(msg);
           } else {
             espClient.close(); // Close the connection if it's not open
+            makeDeviceOffline(result.deviceId);
           }
         }
 
