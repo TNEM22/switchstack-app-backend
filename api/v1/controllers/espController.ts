@@ -141,7 +141,7 @@ const registerEsp = catchAsync(
     // Check if device is already registered
     let esp = await Esp.findOne({
       esp_id,
-    }).select('owner noOfSwitches switches');
+    }).select('owner noOfSwitches switches isOnline');
 
     // If the device is not found, return an error
     if (!esp) {
@@ -164,6 +164,7 @@ const registerEsp = catchAsync(
         users: users,
         name: name,
         icon: icon,
+        isOnline: false,
       },
       { new: true }
     ).populate('switches');
