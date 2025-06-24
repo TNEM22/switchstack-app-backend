@@ -268,6 +268,7 @@ export default function initWebSocketServer(
     for (const [espId, ws] of espConnections.entries()) {
       const customWs = ws as CustomWebsocket;
       if (!customWs.isAlive) {
+        console.log(`Disconnecting... ${espId}`);
         // makeDeviceOffline(espId);
         // espConnections.delete(espId);
         return ws.terminate();
@@ -276,7 +277,7 @@ export default function initWebSocketServer(
       customWs.isAlive = false;
       ws.ping();
     }
-  }, 30000);
+  }, 15000);
 
   wss.on('close', () => {
     clearInterval(interval);
