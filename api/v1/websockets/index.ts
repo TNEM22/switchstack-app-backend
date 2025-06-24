@@ -18,6 +18,10 @@ interface CustomRequest extends express.Request {
   users?: string[];
 }
 
+interface CustomWebsocket extends WebSocket {
+  isAlive?: boolean;
+}
+
 const userConnections = new Map<string, WebSocket[]>();
 const espConnections = new Map<string, WebSocket>();
 
@@ -99,7 +103,7 @@ export default function initWebSocketServer(
   });
 
   // Set up connection handler
-  wss.on('connection', (ws: WebSocket, req: CustomRequest) => {
+  wss.on('connection', (ws: CustomWebsocket, req: CustomRequest) => {
     console.log('\n✅ Client Connected:', req.userId);
     // Store the user connection
     if (req.isUser) {
@@ -114,6 +118,8 @@ export default function initWebSocketServer(
         userConnections.set(req.userId as string, [ws]);
       }
     } else {
+      ws.isAlive = true;
+      ws.on('pong', heartbeat);
       espConnections.set(req.userId as string, ws);
       req.users?.forEach((user) => {
         const usr = userConnections.get(user);
@@ -256,6 +262,29 @@ export default function initWebSocketServer(
       }
     });
   });
+
+  // Heartbeat for the esp/device online check (ping function)
+  const interval = setInterval(function () {
+    for (const [espId, ws] of espConnections.entries()) {
+      const customWs = ws as CustomWebsocket;
+      if (!customWs.isAlive) {
+        // makeDeviceOffline(espId);
+        // espConnections.delete(espId);
+        return ws.terminate();
+      }
+
+      customWs.isAlive = false;
+      ws.ping();
+    }
+  }, 30000);
+
+  wss.on('close', () => {
+    clearInterval(interval);
+  });
+
+  function heartbeat(this: CustomWebsocket) {
+    this.isAlive = true;
+  }
 
   return wss;
 }
