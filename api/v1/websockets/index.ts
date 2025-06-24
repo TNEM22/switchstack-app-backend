@@ -278,7 +278,7 @@ export default function initWebSocketServer(
       customWs.isAlive = false;
       ws.ping();
     }
-  }, 15000);
+  }, 5000);
 
   wss.on('close', () => {
     clearInterval(interval);
