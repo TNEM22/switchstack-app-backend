@@ -274,6 +274,7 @@ export default function initWebSocketServer(
         return ws.terminate();
       }
 
+      console.log(`Ping sent... ${espId}`);
       customWs.isAlive = false;
       ws.ping();
     }
@@ -285,6 +286,7 @@ export default function initWebSocketServer(
 
   function heartbeat(this: CustomWebsocket) {
     this.isAlive = true;
+    console.log(`Pong received...`);
   }
 
   return wss;
