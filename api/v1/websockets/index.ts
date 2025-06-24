@@ -166,8 +166,8 @@ export default function initWebSocketServer(
             console.log(msg);
             espClient.send(msg);
           } else {
-            espClient.close(); // Close the connection if it's not open
             makeDeviceOffline(result.deviceId);
+            espClient.close(); // Close the connection if it's not open
           }
         }
 
@@ -216,6 +216,7 @@ export default function initWebSocketServer(
       const clients = userConnections.get(req.userId as string);
       if (!req.isUser) {
         makeDeviceOffline(req.userId as string);
+        console.log('ESP Disconnected:', req.userId);
         req.users?.forEach((user) => {
           const usr = userConnections.get(user);
           if (usr?.length) {
