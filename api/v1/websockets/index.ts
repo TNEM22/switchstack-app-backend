@@ -269,14 +269,17 @@ export default function initWebSocketServer(
       const customWs = ws as CustomWebsocket;
       if (!customWs.isAlive) {
         console.log(`Disconnecting... ${espId}`);
-        // makeDeviceOffline(espId);
-        // espConnections.delete(espId);
-        return ws.terminate();
+        ws.terminate();
+        makeDeviceOffline(espId);
+        espConnections.delete(espId);
+        continue;
       }
 
-      console.log(`Ping sent... ${espId}`);
-      customWs.isAlive = false;
-      ws.ping();
+      if (ws.readyState === WebSocket.OPEN) {
+        console.log(`Ping sent... ${espId}`);
+        customWs.isAlive = false;
+        ws.ping();
+      }
     }
   }, 5000);
 
