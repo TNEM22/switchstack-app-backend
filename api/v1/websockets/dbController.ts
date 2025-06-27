@@ -46,10 +46,21 @@ export const isDeviceRegistered = async (
   }
 };
 
-export const makeDeviceOffline = (deviceId: string) => {
-  Esp.findByIdAndUpdate(deviceId, {
-    isOnline: false,
-  });
+export const makeDeviceOffline = async (deviceId: string) => {
+  // console.log('ESP Disconnected DB:', deviceId);
+  await Esp.findByIdAndUpdate(
+    deviceId,
+    {
+      isOnline: false,
+    }
+    // { new: true }
+  );
+  // .then((res) => {
+  //   console.log('Device offline status updated:', res);
+  // })
+  // .catch((err) => {
+  //   console.log('Error updating device offline status:', err);
+  // });
 };
 
 type SuccessResponse = {

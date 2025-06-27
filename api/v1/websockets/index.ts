@@ -18,9 +18,9 @@ interface CustomRequest extends express.Request {
   users?: string[];
 }
 
-// interface CustomWebsocket extends WebSocket {
-//   isAlive?: boolean;
-// }
+interface CustomWebsocket extends WebSocket {
+  isAlive?: boolean;
+}
 
 const userConnections = new Map<string, WebSocket[]>();
 const espConnections = new Map<string, WebSocket>();
@@ -103,7 +103,7 @@ export default function initWebSocketServer(
   });
 
   // Set up connection handler
-  wss.on('connection', (ws: WebSocket, req: CustomRequest) => {
+  wss.on('connection', (ws: CustomWebsocket, req: CustomRequest) => {
     console.log('\n✅ Client Connected:', req.userId);
     // Store the user connection
     if (req.isUser) {
@@ -118,14 +118,16 @@ export default function initWebSocketServer(
         userConnections.set(req.userId as string, [ws]);
       }
     } else {
-      // ws.isAlive = true;
-      // ws.on('pong', heartbeat);
+      ws.isAlive = true;
+      ws.on('pong', heartbeat);
       espConnections.set(req.userId as string, ws);
+      //   console.log('Users:', req.users);
       req.users?.forEach((user) => {
         const usr = userConnections.get(user);
         if (usr?.length) {
-          usr.forEach((u) => {
+          usr.forEach((u, idx) => {
             if (u.readyState === WebSocket.OPEN) {
+              console.log('Message Sent:', idx, ' User:', user);
               u.send(
                 JSON.stringify({
                   status: 'info',
@@ -172,7 +174,7 @@ export default function initWebSocketServer(
             console.log(msg);
             espClient.send(msg);
           } else {
-            makeDeviceOffline(result.deviceId);
+            // makeDeviceOffline(result.deviceId);
             espClient.close(); // Close the connection if it's not open
           }
         }
@@ -222,7 +224,7 @@ export default function initWebSocketServer(
       const clients = userConnections.get(req.userId as string);
       if (!req.isUser) {
         makeDeviceOffline(req.userId as string);
-        console.log('ESP Disconnected:', req.userId);
+        // console.log('ESP Disconnected:', req.userId);
         req.users?.forEach((user) => {
           const usr = userConnections.get(user);
           if (usr?.length) {
@@ -264,33 +266,33 @@ export default function initWebSocketServer(
   });
 
   // Heartbeat for the esp/device online check (ping function)
-  //   const interval = setInterval(function () {
-  //     for (const [espId, ws] of espConnections.entries()) {
-  //       const customWs = ws as CustomWebsocket;
-  //       if (!customWs.isAlive) {
-  //         console.log(`Disconnecting... ${espId}`);
-  //         ws.terminate();
-  //         makeDeviceOffline(espId);
-  //         espConnections.delete(espId);
-  //         continue;
-  //       }
+  const interval = setInterval(function () {
+    for (const [espId, ws] of espConnections.entries()) {
+      const customWs = ws as CustomWebsocket;
+      if (!customWs.isAlive) {
+        console.log(`Disconnecting... ${espId}`);
+        ws.terminate();
+        // makeDeviceOffline(espId);
+        espConnections.delete(espId);
+        continue;
+      }
 
-  //       if (ws.readyState === WebSocket.OPEN) {
-  //         console.log(`Ping sent... ${espId}`);
-  //         customWs.isAlive = false;
-  //         ws.ping();
-  //       }
-  //     }
-  //   }, 5000);
+      if (ws.readyState === WebSocket.OPEN) {
+        console.log(`Ping sent... ${espId}`);
+        customWs.isAlive = false;
+        ws.ping();
+      }
+    }
+  }, 5000);
 
-  //   wss.on('close', () => {
-  //     clearInterval(interval);
-  //   });
+  wss.on('close', () => {
+    clearInterval(interval);
+  });
 
-  //   function heartbeat(this: CustomWebsocket) {
-  //     this.isAlive = true;
-  //     console.log(`Pong received...`);
-  //   }
+  function heartbeat(this: CustomWebsocket) {
+    this.isAlive = true;
+    console.log(`Pong received...`);
+  }
 
   return wss;
 }
