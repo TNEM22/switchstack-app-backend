@@ -191,37 +191,37 @@ export default function initWebSocketServer(
           delete response.switchIndex;
 
           // Broadcast the message to all the users
-          setTimeout(() => {
-            result.users.forEach((userId) => {
-              const clients = userConnections.get(userId.toString());
-              // Check if the clients exists
-              if (clients?.length) {
-                clients.forEach((client) => {
-                  if (client.readyState === WebSocket.OPEN) {
-                    client.send(JSON.stringify(response));
-                  } else {
-                    client?.close(); // Close the connection if it's not open
-                    // Remove the client from the user's connections
-                    userConnections.set(
-                      userId.toString(),
-                      clients.filter((c) => c !== client)
-                    );
-                  }
-                });
-              } else {
-                // Remove the user from the map if no clients exist
-                userConnections.delete(userId.toString());
-              }
-            });
-            //   if (client && client.readyState === WebSocket.OPEN) {
-            //     client.send(JSON.stringify(response));
-            //   } else {
-            //     // Close the connection if it's not open
-            //     client?.close();
-            //     // Remove the user from the map
-            //     userConnections.delete(userId.toString());
-            //   }
+          //   setTimeout(() => {
+          result.users.forEach((userId) => {
+            const clients = userConnections.get(userId.toString());
+            // Check if the clients exists
+            if (clients?.length) {
+              clients.forEach((client) => {
+                if (client.readyState === WebSocket.OPEN) {
+                  client.send(JSON.stringify(response));
+                } else {
+                  client?.close(); // Close the connection if it's not open
+                  // Remove the client from the user's connections
+                  userConnections.set(
+                    userId.toString(),
+                    clients.filter((c) => c !== client)
+                  );
+                }
+              });
+            } else {
+              // Remove the user from the map if no clients exist
+              userConnections.delete(userId.toString());
+            }
           });
+          //   if (client && client.readyState === WebSocket.OPEN) {
+          //     client.send(JSON.stringify(response));
+          //   } else {
+          //     // Close the connection if it's not open
+          //     client?.close();
+          //     // Remove the user from the map
+          //     userConnections.delete(userId.toString());
+          //   }
+          //   });
         } else {
           // Send back the error response to the client if result is an error
           ws.send(JSON.stringify(result));
