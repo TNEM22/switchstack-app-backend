@@ -156,7 +156,7 @@ export default function initWebSocketServer(
       if (messageString === 'pong') {
         // heartbeat();
         ws.isAlive = true;
-        console.log('Pong received...');
+        // console.log('Pong received...');
       } else {
         // Step 1: Parse the message
         const { espId, switchId, state } = JSON.parse(messageString);
@@ -169,10 +169,11 @@ export default function initWebSocketServer(
           state
         );
 
-        // Step 3: Broadcast the result to all esp users
+        // Step 3: Broadcast the result to all esp users and esps
         if (result.status === 'success') {
           const response = { ...result } as Partial<typeof result>;
 
+          // Broadcast message to connected esp
           const espClient = espConnections.get(result.deviceId);
           if (espClient) {
             if (espClient.readyState === WebSocket.OPEN) {
@@ -189,26 +190,29 @@ export default function initWebSocketServer(
           delete response.deviceId; // Avoid sending the db registered espId back to user
           delete response.switchIndex;
 
-          result.users.forEach((userId) => {
-            const clients = userConnections.get(userId.toString());
-            // Check if the clients exists
-            if (clients?.length) {
-              clients.forEach((client) => {
-                if (client.readyState === WebSocket.OPEN) {
-                  client.send(JSON.stringify(response));
-                } else {
-                  client?.close(); // Close the connection if it's not open
-                  // Remove the client from the user's connections
-                  userConnections.set(
-                    userId.toString(),
-                    clients.filter((c) => c !== client)
-                  );
-                }
-              });
-            } else {
-              // Remove the user from the map if no clients exist
-              userConnections.delete(userId.toString());
-            }
+          // Broadcast the message to all the users
+          setTimeout(() => {
+            result.users.forEach((userId) => {
+              const clients = userConnections.get(userId.toString());
+              // Check if the clients exists
+              if (clients?.length) {
+                clients.forEach((client) => {
+                  if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify(response));
+                  } else {
+                    client?.close(); // Close the connection if it's not open
+                    // Remove the client from the user's connections
+                    userConnections.set(
+                      userId.toString(),
+                      clients.filter((c) => c !== client)
+                    );
+                  }
+                });
+              } else {
+                // Remove the user from the map if no clients exist
+                userConnections.delete(userId.toString());
+              }
+            });
             //   if (client && client.readyState === WebSocket.OPEN) {
             //     client.send(JSON.stringify(response));
             //   } else {
@@ -285,7 +289,7 @@ export default function initWebSocketServer(
       }
 
       if (ws.readyState === WebSocket.OPEN) {
-        console.log(`Ping sent... ${espId}`);
+        // console.log(`Ping sent... ${espId}`);
         customWs.isAlive = false;
         // ws.ping();
         ws.send('ping'); // Send a ping message to the device
